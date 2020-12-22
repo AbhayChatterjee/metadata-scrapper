@@ -31,7 +31,7 @@ Uses **AWS Lambda** & **API Gateway** for deployment and **DynamoDB** as a simpl
     npm run test
 ```
 
-- Deploy to aws
+- Deploy to AWS
 ```bash
     npm run deploy
 ```
