@@ -1,0 +1,58 @@
+service: metadata-scrapper
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  # memorySize decreased to reduce the cost per invocation of lambda.
+  memorySize: 256
+  # timeout increased to handle heavy page loads ex: Amazon, Flipkart, etc.
+  timeout: 10
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: !GetAtt CacheDynamoDBTable.Arn
+
+#Manage environment variables to services and serverless.yml
+custom:
+  cachetable: Cache
+  ttl: 300 #seconds
+
+functions:
+  metadataScrapper:
+    handler: handler.graphqlHandler
+    environment:
+      CACHE_TABLE: ${self:custom.cachetable}
+      TTL: ${self:custom.ttl}
+    # both post and get http methods required for proper functioning of graphql playground.
+    events:
+      - http:
+          path: /
+          method: post
+          cors: true
+      - http:
+          path: /
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    CacheDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.cachetable}
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
